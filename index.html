@@ -369,13 +369,22 @@ button, input { font: inherit; color: inherit; }
   }
 
   function highlightCode(code) {
-    // AGC layout: optional label in column 1, then opcode, then operand(s).
+    // AGC layout (tabs at 8): label at column 0, opcode at 16, operand(s) at 24.
+    // Unlabeled lines starting at column 24 are operand-only continuation lines
+    // of interpretive code, so their first token is an operand, not an opcode.
     const parts = code.split(/(\s+)/);
     let out = '';
+    let col = 0;
     let field = /^\s/.test(code) ? 1 : 0;
     parts.forEach(function (p) {
       if (!p) return;
-      if (/^\s+$/.test(p)) { out += p; return; }
+      if (/^\s+$/.test(p)) {
+        for (let i = 0; i < p.length; i++) col = p[i] === '\t' ? col + 8 - (col % 8) : col + 1;
+        out += p;
+        return;
+      }
+      if (field === 1 && col >= 24 && /^\s/.test(code)) field = 2;
+      col += p.length;
       const e = esc(p);
       if (field === 0) out += '<span class="lab">' + e + '</span>';
       else if (field === 1) out += '<span class="op">' + e + '</span>';
